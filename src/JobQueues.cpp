@@ -29,13 +29,13 @@ int JobRunnerClass::addQueue(int queueLength = 20, int startDelayMillis = 0) {
 	return index;
 }
 // Start the JobRunner going such that jobs queued start to be executed
-void JobRunnerClass::begin() {
+void JobRunnerClass::begin(int taskPriority) {
 	taskParams_t params = {
 		_queues,
 		_keepRunning
 	};
 	_keepRunning = true;
-	xTaskCreate(JobRunTask, "JobQueues", 2048, (void*)&params, 1, NULL);
+	xTaskCreate(JobRunTask, "JobQueues", 2048, (void*)&params, taskPriority, NULL);
 }
 
 // Queue a job for execution on one of the queues
