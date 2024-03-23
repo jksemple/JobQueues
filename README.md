@@ -35,9 +35,9 @@ A singleton JobRunner object is instantiated as the entry point to all functiona
 
 param **`int queueLength`** The number of jobs allowed to be queued before the queue is full
 
-param ** int startDelayMillis ** The number of millisecs that execution will be delayed for jobs in this queue if the last job was in a higher priority (lower-numbered) queue
+param **`int startDelayMillis`** The number of millisecs that execution will be delayed for jobs in this queue if the last job was in a higher priority (lower-numbered) queue
 
-return ** int queueNum ** The number for the queue that has been added
+return **`int queueNum`** The number for the queue that has been added
 
 ```cpp
 int addQueue(int queueLength, int startDelayMillis);
@@ -45,7 +45,7 @@ int addQueue(int queueLength, int startDelayMillis);
 
 #### Start JobRunner
 
-param ** int taskPriority ** The FreeRTOS priority for the background task defaulting to 1 but can be set higher (up to 32?) as needed
+param **`int taskPriority`** The FreeRTOS priority for the background task defaulting to 1 but can be set higher (up to 32?) as needed
 
 ```cpp
 void begin(int taskPriority = 1);
@@ -53,13 +53,13 @@ void begin(int taskPriority = 1);
 
 #### Add a Job
 
-param ** int queueNum  ** The 0-based index of the queue to add to
+param **`int queueNum`** The 0-based index of the queue to add to
 
-param ** std::function<bool(int&, String&)> job ** The lambda expression to be executed in the background task
+param **`std::function<bool(int&, String&)> job`** The lambda expression to be executed in the background task
 
-param ** void (*callback)(int jobId, bool ret, int status, String message, int execMillis) ** a callback function through which to receive notification when the job has been executed
+param **`void (*callback)(int jobId, bool ret, int status, String message, int execMillis)`** a callback function through which to receive notification when the job has been executed
 
-return ** int jobId ** The id of the Job for later correlation with execution notifications. Zero if the queue is full
+return **`int jobId`** The id of the Job for later correlation with execution notifications. Zero if the queue is full
 
 ```cpp
 int addJob(int queueNum, std::function<bool(int&, String&)> job, void(*callback)(int jobId, bool ret, int status, String message, int execMillis) = NULL);
@@ -67,16 +67,16 @@ int addJob(int queueNum, std::function<bool(int&, String&)> job, void(*callback)
 
 #### Pause queue
 
-param ** int queueNum ** The 0-based index of the queue to pause
+param **`int queueNum`** The 0-based index of the queue to pause
 
 ```cpp
 void pauseQueue(int queueNum = 0);
 ```
 #### Queue size
 
-param ** int queueNum ** The 0-based index of the queue to query
+param **`int queueNum`** The 0-based index of the queue to query
 
-return ** int count ** The number of jobs in this queue
+return **`int count`** The number of jobs in this queue
 
 ```cpp
 int jobCount(int queueNum = 0);
