@@ -1,59 +1,50 @@
 #include "JobQueues.h"
+#include "esp_system.h"
 
 bool jobDone = false;
+int jobsCompleted;
+unsigned long heap1;
 
 void myCallback(int jobId, bool ret, int status, String message, int execMillis) {
   Serial.print("JobId "); Serial.print(jobId);
-  Serial.print(ret ? " succeeded " : " failed ");
-  Serial.print("Status="); Serial.print(status); 
+  Serial.print(ret ? " succeeded" : " failed");
+  Serial.print(" Status="); Serial.print(status); 
   Serial.print(" message="); Serial.print(message); 
   Serial.print(" ran in "); Serial.print(execMillis); Serial.println("ms");
   
-  if (jobId == 11) jobDone = true;
+  jobsCompleted += 1;
+  if (jobsCompleted == 4) jobDone = true;
 }
+
+int normalQueue;
+
+typedef struct {
+  int number;
+  const char* author;
+  String name;
+} jobParams_t;
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println("Started");
 
-  int normalQueue = JobRunner.addQueue(20, 0);
-  int slowQueue = JobRunner.addQueue(20, 1000);
-
-  JobRunner.begin();
-
-  std::function<bool(int&, String&)> writeToDiskJob = [](int& status, String& message) { 
-      Serial.println("Writing to disk"); 
-      delay(2000);
-      Serial.println("Still writing to disk"); 
-      delay(1000);
-      Serial.println("Finished writing to disk"); 
-      status = 13; 
-      message = "ok"; 
-      return true; 
-  };
-
-  Serial.println("Queueing");
-  int myJobId1 = JobRunner.addJob(normalQueue, writeToDiskJob, myCallback);
-  Serial.print("Queued jobId = "); Serial.println(myJobId1);
-
-  for (int i = 1; i <= 10; i++) {
-    std::function<bool(int&, String&)> uploadJob = [i](int& status, String& message) { 
-        Serial.print("Uploading "); Serial.println(i);
-        delay(500);
-        Serial.print("Still uploading "); Serial.println(i);
-        delay(100);
-        Serial.println("Finished uploading"); 
-        status = 42; 
-        message = "done " + i; 
-        return true; 
-    };
-    int myUploadJobId = JobRunner.addJob(slowQueue, uploadJob, myCallback);
-    Serial.print("Queued JobId = "); Serial.println(myUploadJobId);
-  }
-  delay(2000);
-  int myJobId2 = JobRunner.addJob(normalQueue, writeToDiskJob, myCallback);
+  normalQueue = JobRunner.addQueue(20, 0);
   
+  JobRunner.begin();
+  delay(50);
+  Serial.println();
+  Serial.print("Free heap = "); Serial.println(esp_get_free_heap_size());
+  heap1 = esp_get_free_heap_size();
+  Serial.println();
+
+  for (int j = 1; j <= 4; j++) {
+    String param2 = "Oliver Twist";
+    queueDiskWriteJob(j, "Dickens", param2);
+    Serial.println();
+    Serial.print("Free heap = "); Serial.println(esp_get_free_heap_size());
+    Serial.println();
+  }
 }
 
 void loop() {
@@ -62,7 +53,36 @@ void loop() {
     delay(300);
   }
   Serial.println("All done");
+  Serial.println();
+  Serial.print("Free heap = "); Serial.println(esp_get_free_heap_size());
+  if (esp_get_free_heap_size() == heap1) {
+    Serial.println("No memory leak");
+  } else {
+    Serial.print("Memory leak - "); Serial.print(heap1 - esp_get_free_heap_size()); Serial.println(" bytes");
+  }
   while(1) ;
 }
 
+// Queue up a fake disk write job
+int queueDiskWriteJob(int j, const char* author, String name) {
+    auto params = new jobParams_t {
+      j,
+      author,
+      name,
+    };
+    std::function<bool(int&, String&)> writeToDiskJob = [=](int& status, String& message) { 
+      Serial.print("Writing to file "); Serial.println(params->number);
+      delay(500);
+      Serial.print("Name: "); Serial.println(params->name);
+      delay(1000);
+      Serial.print("Author: "); Serial.println(params->author);
+      status = 13; 
+      message = "ok"; 
+      free((void*)params);
+      return true; 
+  };
 
+  int myJobId = JobRunner.addJob(normalQueue, writeToDiskJob, myCallback);
+  Serial.print("Queued jobId = "); Serial.println(myJobId);
+  return myJobId;
+}

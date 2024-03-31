@@ -2,9 +2,9 @@
  
 This library allows jobs to be run in a background thread/task on ESP32.
 It uses FreeRTOS to run the background task and one or more queues to pass jobs to it.
-If multiple queues are setup jobs are executed in queue order so jobs in the first queue will all be executed before any in the second queue etc.
+If multiple queues are setup jobs are executed in queue order so jobs in the first added queue will all be executed before any in the second queue etc.
 If a job were added to, say, the empty first queue it would be executed when the current job (say from the second queue) has finished. Execution would then resume with the rest of the second queue.
-Only one job runs at any time across all the queues.
+Only one job runs at any time across all the queues. This ensures that scarce resources such as local disk, sensors and remote services won't suffer from contention problems without them having been locked (which is unnecessary complication for most use cases).
 
 ## Intention
 
@@ -14,16 +14,16 @@ It replaces what were a couple of very application-specific background tasks wit
 ## Configuration
 
 Queues need to be added to the JobRunner object (.addQueue) before it is started. 
-Each successive queue is lower in the execution order than the previous one.
+Each successive added queue is lower in the execution order than the previous one.
 A queue can optionally be given a 'startDelayMillis' parameter which stops jobs in that queue from being executed for a period of time if the last job executed was in an earlier queue.  
 This stops a lower priority, long-running job from blocking what might be a sparse stream of higher priority jobs that are not quite frequent enough to keep their queue full.
 The background task can be started at any FreeRTOS Priority level defaulting to 1.
+Once all queues have been added the JobRunner is started (.begin) and any queued jobs begin to be executed.
 
 ## Job queueing
 
-Jobs are added to the queues (.addJob) as a std::function wrapper around a lambda expression that contains the code to be run. 
-Any parameters that are to be passed in to the job need to be defined as captures in the lambda and care should be taken to ensure that any stack allocated objects passed in will not go out of scope when the calling method has gone out of scope.  
-This typically means using malloc or strdup to copy objects and then freeing them within the lambda before execution ends.
+Jobs are added to a queue (.addJob) as a std::function wrapper around a lambda expression that contains the code to be run. 
+Any parameters that are to be passed in to the job need to be grouped into a newed struct which is passed as a capture into the lambda. The parameter structure needs to be freed before the lambda exits. I don't know why this works and passing in multiple captured parameters results in memory leaks or exceptions. Let me know if you can explain it.
 
 ## Function Descriptions
 
@@ -55,7 +55,7 @@ void begin(int taskPriority = 1);
 
 param **`int queueNum`** The 0-based index of the queue to add to
 
-param **`std::function<bool(int&, String&)> job`** The lambda expression to be executed in the background task
+param **`std::function<bool(int&, String&)> job`** The lambda expression to be executed in the background task. JobRunner expects the std::function to return a bool and to take int and String parameters to report any errors so don't change the signature.
 
 param **`void (*callback)(int jobId, bool ret, int status, String message, int execMillis)`** a callback function through which to receive notification when the job has been executed
 

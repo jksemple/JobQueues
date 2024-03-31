@@ -30,19 +30,21 @@ int JobRunnerClass::addQueue(int queueLength = 20, int startDelayMillis = 0) {
 }
 // Start the JobRunner going such that jobs queued start to be executed
 void JobRunnerClass::begin(int taskPriority) {
+	log_i("Starting JobRunTask");
 	taskParams_t params = {
 		_queues,
 		_keepRunning
 	};
 	_keepRunning = true;
-	xTaskCreate(JobRunTask, "JobQueues", 2048, (void*)&params, taskPriority, NULL);
+	// It fails with a stack size of 2048
+	xTaskCreate(JobRunTask, "JobQueues", 8192, (void*)&params, taskPriority, NULL);
 }
 
 // Queue a job for execution on one of the queues
 // An optional callback function will notify when the job has finished and report success or otherwise and execution time
-int JobRunnerClass::addJob(int queueNum, std::function<bool(int&, String&)> job, void(*callback)(int jobId, bool ret, int status, String message, int ExecMillis)) {
+int JobRunnerClass::addJob(int queueNum, std::function<bool(int&, String&)> job, void(*callback)(int jobId, bool ret, int status, String message, int execMillis)) {
 
-  Serial.println("In addJob");
+  //Serial.println("In addJob");
   jobQueueEntry_t queueEntry = {
 	  job,
 	  _jobId + 1,
@@ -64,6 +66,7 @@ void JobRunTask(void* args) {
   int lastQueueIndex;
   unsigned long lastRunMillis;
   
+  Serial.print("JobRunner: ");
   Serial.print(JobRunner._queues.size());
   Serial.println(" queues");
   while(JobRunner._keepRunning) {
@@ -81,19 +84,26 @@ void JobRunTask(void* args) {
 						  continue;
 					  }
 				  }
+				  //log_i("Reading from Q %d", queue.index);
 				  if (xQueueReceive(queue.handle, &queueEntry, 10) == pdPASS) {
 					  int status;
 					  String message;
 					  unsigned long startMillis = millis();
 					  // Execute the job capturing success/failure and possible status/message
 					  //Serial.print("Running job "); Serial.println(queueEntry.jobId);
-					  bool ret = queueEntry.job(status, message);
+					  log_i("Running job %d", queueEntry.jobId);
+					  vTaskDelay(500);
+					  auto fn = std::move(queueEntry.job);
+					  bool ret = fn(status, message);
+					  log_i("Ran job %d", queueEntry.jobId);
 					  // Call the execution result callback 
+					  log_i("Running callback for job %d", queueEntry.jobId);
 					  if (queueEntry.callback) {
 						  queueEntry.callback(queueEntry.jobId, ret, status, message, millis()-startMillis);
 					  }
 					  lastQueueIndex = queue.index;
 					  lastRunMillis = millis();
+					  log_i("Done");
 					  // Start another loop iteration;
 					  continue; 
 				  }

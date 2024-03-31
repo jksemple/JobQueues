@@ -5,6 +5,9 @@
 #include <vector>
 #include <functional>
 
+#define JOBFUNC std::function<bool(int&, String&)>
+#define JOBCALLBACK(f) void(*f)(int jobId, bool ret, int status, String message, int execMillis)
+
 typedef struct {
   int index;
   QueueHandle_t handle;
