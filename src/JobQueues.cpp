@@ -29,7 +29,7 @@ int JobRunnerClass::addQueue(int queueLength = 20, int startDelayMillis = 0) {
 	return index;
 }
 // Start the JobRunner going such that jobs queued start to be executed
-void JobRunnerClass::begin(int taskPriority) {
+void JobRunnerClass::begin(int stackSpace, int taskPriority) {
 	log_i("Starting JobRunTask");
 	taskParams_t params = {
 		_queues,
@@ -37,7 +37,7 @@ void JobRunnerClass::begin(int taskPriority) {
 	};
 	_keepRunning = true;
 	// It fails with a stack size of 2048
-	xTaskCreate(JobRunTask, "JobQueues", 8192, (void*)&params, taskPriority, NULL);
+	xTaskCreate(JobRunTask, "JobQueues", stackSpace, (void*)&params, taskPriority, NULL);
 }
 
 // Queue a job for execution on one of the queues
@@ -69,6 +69,8 @@ void JobRunTask(void* args) {
   Serial.print("JobRunner: ");
   Serial.print(JobRunner._queues.size());
   Serial.println(" queues");
+  JobRunner._stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+  
   while(JobRunner._keepRunning) {
 	  // Iterate through queues looking for a non-paused queue
 	  for(auto queue : JobRunner._queues) {
@@ -96,6 +98,7 @@ void JobRunTask(void* args) {
 					  auto fn = std::move(queueEntry.job);
 					  bool ret = fn(status, message);
 					  log_i("Ran job %d", queueEntry.jobId);
+					  JobRunner._stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 					  // Call the execution result callback 
 					  log_i("Running callback for job %d", queueEntry.jobId);
 					  if (queueEntry.callback) {

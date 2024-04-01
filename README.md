@@ -45,10 +45,12 @@ int addQueue(int queueLength, int startDelayMillis);
 
 #### Start JobRunner
 
+param **`int stackSize`** The number of bytes available for the JobRunner stack defaulting to 4096
+
 param **`int taskPriority`** The FreeRTOS priority for the background task defaulting to 1 but can be set higher (up to 32?) as needed
 
 ```cpp
-void begin(int taskPriority = 1);
+void begin(int stackSize, int taskPriority = 1);
 ```
 
 #### Add a Job
@@ -82,6 +84,13 @@ return **`int count`** The number of jobs in this queue
 int jobCount(int queueNum = 0);
 ```
 
+#### Get stack high water mark
+
+return **`int hwm`** The JobRunner task's stack 'high water mark', which is the lowest number of free bytes still available for stack growth.  If this is below 1000 it might be prudent to .begin() with more allocated stack space
+
+```cpp
+int getStackHighWaterMark();
+```
 The MIT License (MIT)
 
 Copyright (c) 2024 Jonathan Semple (jksemple)
