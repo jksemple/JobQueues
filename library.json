@@ -1,6 +1,6 @@
 {
   "name": "JobQueues",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "keywords": "Data Processing",
   "description": "Run arbitrary jobs on a background task on ESP32",
   "repository": {
@@ -12,5 +12,5 @@
     "email": "github@semple.org"
   }],
   "frameworks": "arduino",
-  "platforms": "espressif32, espressif8266"
+  "platforms": "espressif32"
 }

@@ -1,5 +1,6 @@
 #include "JobQueues.h"
 #include "esp_system.h"
+#include "Controller.h"
 
 bool jobDone = false;
 int jobsCompleted;
@@ -14,6 +15,7 @@ void myCallback(int jobId, bool ret, int status, String message, int execMillis)
   
   jobsCompleted += 1;
   if (jobsCompleted == 4) jobDone = true;
+  g_Controller.jobDone(jobId, ret);
 }
 
 int normalQueue;
@@ -24,6 +26,8 @@ typedef struct {
   String name;
 } jobParams_t;
 
+Controller g_Controller;
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -33,7 +37,6 @@ void setup() {
   
   JobRunner.begin();
   delay(50);
-  Serial.print("Idle ?"); Serial.println(JobRunner.isIdle() ? "yes" : "no");
   Serial.println();
   Serial.print("Free heap = "); Serial.println(esp_get_free_heap_size());
   heap1 = esp_get_free_heap_size();
@@ -44,7 +47,6 @@ void setup() {
     queueDiskWriteJob(j, "Dickens", param2);
     Serial.println();
     Serial.print("Free heap = "); Serial.println(esp_get_free_heap_size());
-    Serial.print("Idle ?"); Serial.println(JobRunner.isIdle() ? "yes" : "no");
     Serial.println();
   }
 }
@@ -52,7 +54,7 @@ void setup() {
 void loop() {
   while(! jobDone) {
     Serial.println("Foreground activity");
-    Serial.print("Idle ?"); Serial.println(JobRunner.isIdle() ? "yes" : "no");
+    g_Controller.showJobStatus();
     delay(300);
   }
   Serial.println("All done");
@@ -63,12 +65,14 @@ void loop() {
   } else {
     Serial.print("Memory leak - "); Serial.print(heap1 - esp_get_free_heap_size()); Serial.println(" bytes");
   }
-  Serial.print("Idle ?"); Serial.println(JobRunner.isIdle() ? "yes" : "no");
   while(1) ;
 }
 
 // Queue up a fake disk write job
 int queueDiskWriteJob(int j, const char* author, String name) {
+
+    using namespace std::placeholders;
+
     auto params = new jobParams_t {
       j,
       author,

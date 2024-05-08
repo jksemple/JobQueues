@@ -1,7 +1,7 @@
 # JobQueues
  
 This library allows jobs to be run in a background thread/task on ESP32.
-It uses FreeRTOS to run the background task and one or more queues to pass jobs to it.
+It uses FreeRTOS to run the single background task and one or more queues to pass jobs to it.
 If multiple queues are setup jobs are executed in queue order so jobs in the first added queue will all be executed before any in the second queue etc.
 If a job were added to, say, the empty first queue it would be executed when the current job (say from the second queue) has finished. Execution would then resume with the rest of the second queue.
 Only one job runs at any time across all the queues. This ensures that scarce resources such as local disk, sensors and remote services won't suffer from contention problems without them having been locked (which is unnecessary complication for most use cases).
@@ -22,8 +22,8 @@ Once all queues have been added the JobRunner is started (.begin) and any queued
 
 ## Job queueing
 
-Jobs are added to a queue (.addJob) as a std::function wrapper around a lambda expression that contains the code to be run. 
-Any parameters that are to be passed in to the job need to be grouped into a newed struct which is passed as a capture into the lambda. The parameter structure needs to be freed before the lambda exits. I don't know why this works and passing in multiple captured parameters results in memory leaks or exceptions. Let me know if you can explain it.
+Jobs are added to a queue (.addJob) as a std::function wrapper around a lambda expression that contains the code to be run. If the task is potentially long-running there should be some yield points in it to ensure the Idle task gets some processor cycles otherwise the watchdog timer will be triggered. A yield point is most easily included with a call to vTaskDelay(1). There is also taskYIELD() but the documentation for this suggests that only tasks of the same or higher priority will get scheduled. Let me know if you know more about this than me.
+Any parameters that are to be passed in to the job need to be grouped into a newed struct which is passed as a value capture into the lambda. The parameter structure needs to be freed before the lambda exits. I don't know why this works and using multiple captured variables not in a struct results in memory leaks or exceptions. Let me know if you can explain it.
 
 ## Function Descriptions
 
@@ -43,16 +43,19 @@ return **`int queueNum`** The number for the queue that has been added
 int addQueue(int queueLength, int startDelayMillis);
 ```
 
-#### Start JobRunner
+#### Start/stop JobRunner
 
 param **`int stackSize`** The number of bytes available for the JobRunner stack defaulting to 4096
 
 param **`int taskPriority`** The FreeRTOS priority for the background task defaulting to 1 but can be set higher (up to 32?) as needed
 
 ```cpp
-void begin(int stackSize, int taskPriority = 1);
+void begin(int stackSize = 4096, int taskPriority = 1);
 ```
 
+```cpp
+void end();
+```
 #### Add a Job
 
 param **`int queueNum`** The 0-based index of the queue to add to
@@ -82,6 +85,14 @@ return **`int count`** The number of jobs in this queue
 
 ```cpp
 int jobCount(int queueNum = 0);
+```
+
+```cpp
+int jobCount();
+```
+
+```cpp
+bool isIdle();
 ```
 
 #### Get stack high water mark
