@@ -5,8 +5,8 @@
 #include <vector>
 #include <functional>
 
-#define JOBFUNC std::function<bool(int&, String&)>
-#define JOBCALLBACK(f) void(*f)(int jobId, bool ret, int status, String message, int execMillis)
+#define JOBFUNC std::function<void(void)>
+#define JOBCALLBACK(f) void(*f)(int jobId, bool ret, String message, int execMillis)
 
 typedef struct {
   int index;
@@ -16,9 +16,9 @@ typedef struct {
 } queue_t;
 
 typedef struct {
-  std::function<bool(int&, String&)> job;
+  std::function<void(void)> job;
   int jobId;
-  void(*callback)(int jobId, bool ret, int status, String message, int execMillis);
+  void(*callback)(int jobId, bool ret, String message, int execMillis);
 } jobQueueEntry_t;
 
 typedef struct {
@@ -34,7 +34,7 @@ class JobRunnerClass {
 		int addQueue(int queueLength, int startDelayMillis);
 		void begin(int stackSpace = 4096, int taskPriority = 1);
 		void end();
-		int addJob(int queueNum, std::function<bool(int&, String&)> job, void(*callback)(int jobId, bool ret, int status, String message, int execMillis) = NULL);
+		int addJob(int queueNum, std::function<void(void)> job, void(*callback)(int jobId, bool ret, String message, int execMillis) = NULL);
 		void pauseQueue(int queueNum = 0);
 		int jobCount(int queueNum) { return uxQueueMessagesWaiting(_queues[queueNum].handle); };
 		bool isIdle() { return _idle; }

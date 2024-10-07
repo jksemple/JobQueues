@@ -48,7 +48,7 @@ void JobRunnerClass::end() {
 
 // Queue a job for execution on one of the queues
 // An optional callback function will notify when the job has finished and report success or otherwise and execution time
-int JobRunnerClass::addJob(int queueNum, std::function<bool(int&, String&)> job, void(*callback)(int jobId, bool ret, int status, String message, int execMillis)) {
+int JobRunnerClass::addJob(int queueNum, std::function<void(void)> job, void(*callback)(int jobId, bool ret, String message, int execMillis)) {
 
   //Serial.println("In addJob");
   _idle = false;
@@ -111,13 +111,20 @@ void JobRunTask(void* args) {
 					  log_i("Running job %d", queueEntry.jobId);
 					  vTaskDelay(10);
 					  auto fn = std::move(queueEntry.job);
-					  bool ret = fn(status, message);
+					  bool success = true;
+					  String error = "";
+					  try {
+						fn();
+					  } catch (std::exception const& ex) {
+						error = ex.what();
+						success = false;
+					  }
 					  //log_i("Ran job %d", queueEntry.jobId);
 					  JobRunner._stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 					  // Call the execution result callback 
 					  //log_i("Running callback for job %d", queueEntry.jobId);
 					  if (queueEntry.callback) {
-						  queueEntry.callback(queueEntry.jobId, ret, status, message, millis()-startMillis);
+						  queueEntry.callback(queueEntry.jobId, success, error, millis()-startMillis);
 					  }
 					  lastQueueIndex = queue.index;
 					  lastRunMillis = millis();
@@ -128,7 +135,7 @@ void JobRunTask(void* args) {
 			  }
 		  }
 	  }
-	  jobRunner->_idle = true;
+	  jobRunner->_idle = jobRunner->jobCount() == 0;
 	  vTaskDelay(10);
   }
   vTaskDelete(NULL);

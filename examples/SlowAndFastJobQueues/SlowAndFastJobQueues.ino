@@ -1,15 +1,13 @@
 #include "JobQueues.h"
-#include "esp_system.h"
 
 bool allDone = false;
 int jobsCompleted;
 unsigned long heap1;
 
-void myCallback(int jobId, bool ret, int status, String message, int execMillis) {
+void myCallback(int jobId, bool ret, String error, int execMillis) {
   Serial.print("JobId "); Serial.print(jobId);
   Serial.print(ret ? " succeeded" : " failed");
-  Serial.print(" Status="); Serial.print(status); 
-  Serial.print(" message="); Serial.print(message); 
+  if (!ret) { Serial.print(" error="); Serial.print(error); }
   Serial.print(" ran in "); Serial.print(execMillis); Serial.println("ms");
   
   jobsCompleted += 1;
@@ -31,8 +29,11 @@ typedef struct {
   String filename;
 } uploadJobParams_t;
 
-int queueWrite(writeJobParams_t* writeJobParams, int queue);
+void queueUploads(int queue);
 int queueUpload(uploadJobParams_t* uploadJobParams, int queue);
+int queueWrite(writeJobParams_t* writeJobParams, int queue);
+int queueWrite1(int queue);
+int queueWrite2(int queue);
 
 void setup() {
   Serial.begin(115200);
@@ -83,14 +84,12 @@ void loop() {
 
 int queueWrite(writeJobParams_t* writeJobParams, int queue) {
 
-  std::function<bool(int&, String&)> writeJob = [=](int& status, String& message) { 
+  std::function<void(void)> writeJob = [=]() { 
       Serial.print("Writing file "); Serial.println(writeJobParams->number);
       delay(2000);
       Serial.print("Filename: "); Serial.println(writeJobParams->filename);
       delay(1000);
       Serial.print("Version: "); Serial.println(writeJobParams->version);
-      status = 13; 
-      message = "ok"; 
 
       free ((void*)writeJobParams);
       return true; 
@@ -119,14 +118,12 @@ int queueWrite2(int queue) {
 
 int queueUpload(uploadJobParams_t* uploadJobParams, int queue) {
 
-  std::function<bool(int&, String&)> uploadJob = [=](int& status, String& message) { 
+  std::function<void(void)> uploadJob = [=](void) { 
       Serial.print("Uploading to "); Serial.print(uploadJobParams->serverURL); Serial.print(" "); Serial.println(uploadJobParams->port);
       delay(500);
       Serial.print("Filename: "); Serial.println(uploadJobParams->filename);
       delay(100);
       Serial.println("Finished uploading"); 
-      status = 42; 
-      message = "done " + uploadJobParams->filename; 
 
       free((void*)uploadJobParams);
       return true; 

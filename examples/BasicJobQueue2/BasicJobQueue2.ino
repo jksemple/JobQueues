@@ -1,16 +1,17 @@
 #include "JobQueues.h"
-#include "esp_system.h"
+
 #include "Controller.h"
 
 bool jobDone = false;
 int jobsCompleted;
 unsigned long heap1;
 
-void myCallback(int jobId, bool ret, int status, String message, int execMillis) {
+int queueDiskWriteJob(int j, const char* author, String name);
+
+void myCallback(int jobId, bool ret, String error, int execMillis) {
   Serial.print("JobId "); Serial.print(jobId);
   Serial.print(ret ? " succeeded" : " failed");
-  Serial.print(" Status="); Serial.print(status); 
-  Serial.print(" message="); Serial.print(message); 
+  if (!ret) { Serial.print(" error="); Serial.print(error); }
   Serial.print(" ran in "); Serial.print(execMillis); Serial.println("ms");
   
   jobsCompleted += 1;
@@ -78,14 +79,12 @@ int queueDiskWriteJob(int j, const char* author, String name) {
       author,
       name,
     };
-    std::function<bool(int&, String&)> writeToDiskJob = [=](int& status, String& message) { 
+    std::function<void(void)> writeToDiskJob = [=]() { 
       Serial.print("Writing to file "); Serial.println(params->number);
       delay(500);
       Serial.print("Name: "); Serial.println(params->name);
       delay(1000);
       Serial.print("Author: "); Serial.println(params->author);
-      status = 13; 
-      message = "ok"; 
       free((void*)params);
       return true; 
   };
