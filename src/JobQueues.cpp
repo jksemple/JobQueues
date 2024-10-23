@@ -124,7 +124,7 @@ void JobRunTask(void* args) {
 					  JobRunner._stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 					  // Call the execution result callback 
 					  //log_i("Running callback for job %d", queueEntry.jobId);
-					  JOBCALLBACK(cb) = queueEntry.callback != nullptr ? queueEntry.callback : _defaultCallback;
+					  JOBCALLBACK(cb) = queueEntry.callback != nullptr ? queueEntry.callback : JobRunner._defaultCallback;
 					  if (cb) {
 						  cb(queueEntry.jobId, success, error, millis()-startMillis);
 					  }
