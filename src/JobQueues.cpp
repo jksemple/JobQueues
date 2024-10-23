@@ -29,7 +29,7 @@ int JobRunnerClass::addQueue(int queueLength = 20, int startDelayMillis = 0) {
 	return index;
 }
 // Start the JobRunner going such that jobs queued start to be executed
-void JobRunnerClass::begin(int stackSpace, int taskPriority) {
+void JobRunnerClass::begin(int stackSpace, int taskPriority, void(*callback)(int jobId, bool ret, String message, int execMillis)) {
 	log_i("Starting JobRunTask");
 	//taskParams_t params = {
 	//	_queues,
@@ -38,6 +38,7 @@ void JobRunnerClass::begin(int stackSpace, int taskPriority) {
 	//};
 	_keepRunning = true;
 	_idle = true;
+	_defaultCallback = callback;
 	// It fails with a stack size of 2048
 	xTaskCreate(JobRunTask, "JobQueues", stackSpace, (void*)this, taskPriority, NULL);
 }
@@ -123,8 +124,9 @@ void JobRunTask(void* args) {
 					  JobRunner._stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 					  // Call the execution result callback 
 					  //log_i("Running callback for job %d", queueEntry.jobId);
-					  if (queueEntry.callback) {
-						  queueEntry.callback(queueEntry.jobId, success, error, millis()-startMillis);
+					  JOBCALLBACK(cb) = queueEntry.callback != nullptr ? queueEntry.callback : _defaultCallback;
+					  if (cb) {
+						  cb(queueEntry.jobId, success, error, millis()-startMillis);
 					  }
 					  lastQueueIndex = queue.index;
 					  lastRunMillis = millis();

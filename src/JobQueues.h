@@ -32,7 +32,7 @@ class JobRunnerClass {
 		JobRunnerClass();
 		~JobRunnerClass();
 		int addQueue(int queueLength, int startDelayMillis);
-		void begin(int stackSpace = 4096, int taskPriority = 1);
+		void begin(int stackSpace = 4096, int taskPriority = 1, void(*callback)(int jobId, bool ret, String message, int execMillis) = NULL);
 		void end();
 		int addJob(int queueNum, std::function<void(void)> job, void(*callback)(int jobId, bool ret, String message, int execMillis) = NULL);
 		void pauseQueue(int queueNum = 0);
@@ -48,6 +48,7 @@ class JobRunnerClass {
 		int _taskPriority;
 		int _stackHighWaterMark;
 		std::vector<queue_t> _queues;
+		void(*_defaultCallback)(int jobId, bool ret, String message, int execMillis);
 };
 
 void JobRunTask(void* args);

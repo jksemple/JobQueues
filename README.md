@@ -49,8 +49,9 @@ param **`int stackSize`** The number of bytes available for the JobRunner stack 
 
 param **`int taskPriority`** The FreeRTOS priority for the background task defaulting to 1 but can be set higher (up to 32?) as needed
 
+param **`void (*callback)(int jobId, bool ret, String error, int execMillis)`** a default callback function through which to receive notification when jobs have been executed e.g. for logging
 ```cpp
-void begin(int stackSize = 4096, int taskPriority = 1);
+void begin(int stackSize = 4096, int taskPriority = 1, void(*callback)(int jobId, bool ret, int status, String message, int execMillis) = NULL);
 ```
 
 ```cpp
